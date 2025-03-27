@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lei Orgânica - Questões</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f6f7f8;
+      color: #222;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 24px;
+      font-weight: 600;
+    }
+    nav {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    nav button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 12px;
+      background-color: #e5e7eb;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background 0.3s ease;
+    }
+    nav button.active, nav button:hover {
+      background-color: #4f46e5;
+      color: #fff;
+    }
+    .tab {
+      display: none;
+    }
+    .tab.active {
+      display: block;
+    }
+    .question, .filter, .dashboard {
+      background: #fff;
+      padding: 20px;
+      border-radius: 16px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    .question p {
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    .option {
+      display: block;
+      padding: 10px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      margin: 6px 0;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .option:hover {
+      background-color: #f3f4f6;
+    }
+    .option.eliminated {
+      background-color: #fee2e2;
+      text-decoration: line-through;
+      color: #9ca3af;
+    }
+    .correct {
+      background-color: #dcfce7 !important;
+      border-color: #22c55e !important;
+    }
+    .incorrect {
+      background-color: #fee2e2 !important;
+      border-color: #ef4444 !important;
+    }
+    select {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #d1d5db;
+      font-size: 14px;
+    }
+    canvas {
+      max-width: 500px;
+      margin: 20px auto;
+      display: block;
+    }
+      @media (max-width: 600px) {
+      body {
+        padding: 10px;
+      }
+      h1 {
+        font-size: 20px;
+        margin-bottom: 20px;
+      }
+      nav {
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+      }
+      nav button {
+        width: 100%;
+        max-width: 300px;
+      }
+      .question, .filter, .dashboard {
+        padding: 16px;
+      }
+      select {
+        font-size: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <button onclick="showTab('questoes')" class="active">Questões</button>
+    <button onclick="showTab('dashboard')">Painel de Desempenho</button>
+    <button onclick="showTab('historico')">Histórico Diário</button>
+    <button onclick="startSimulado()">Modo Simulado</button>
+  </nav>
+
+  <div id="questoes" class="tab active">
+    <div class="filter">
+      <label for="temaSelect">Filtrar por tema:</label>
+      <select id="temaSelect" onchange="filtrarPorTema()">
+        <option value="todos">Todos os Títulos</option>
+        <option value="Título I">Título I – Do Município</option>
+        <option value="Título II">Título II – Da Organização dos Poderes</option>
+        <option value="Título III">Título III – Da Administração Municipal</option>
+        <option value="Título IV">Título IV – Do Planejamento Municipal, da Política Urbana e da Proteção do Meio Ambiente</option>
+        <option value="Título V">Título V – Da Atividade Econômica e Social do Município</option>
+        <option value="Título VI">Título VI – Das Disposições Gerais e Transitórias</option>
+      </select>
+    </div>
+    <div id="questions"></div>
+<div style="text-align: right; margin-top: 10px;">
+  <button id="nextBtn" style="padding: 8px 16px; border-radius: 8px; border: none; background-color: #4f46e5; color: white; cursor: pointer;">Próxima ➜</button>
+</div>
+    <div class="progress" style="margin-top: 10px; font-size: 14px;"></div>
+  </div>
+
+  <div id="dashboard" class="tab">
+    <div class="dashboard">
+      <h3>Desempenho Geral</h3>
+      <p>Total de questões respondidas: <span id="totalResp">0</span></p>
+      <p>Acertos: <span id="totalAcertos">0</span></p>
+      <p>Erros: <span id="totalErros">0</span></p>
+      <canvas id="graficoDesempenho"></canvas>
+    </div>
+    <div class="dashboard">
+      <h3>Desempenho por Tema</h3>
+      <canvas id="graficoTemas"></canvas>
+    </div>
+  </div>
+
+  <div id="historico" class="tab">
+    <div class="dashboard">
+      <h3>Histórico Diário</h3>
+      <div id="historicoConteudo"></div>
+    </div>
+  </div>
+
+  <div id="simulado" class="tab">
+    <div class="dashboard">
+      <h3>Modo Simulado</h3>
+      <p>Selecione quantas questões deseja responder:</p>
+      <input type="number" id="qtdSimulado" placeholder="Ex: 10" style="width: 100%; padding: 8px; margin: 10px 0;">
+      <button onclick="iniciarSimulado()" style="padding: 10px 20px; border: none; background: #4f46e5; color: white; border-radius: 8px; cursor: pointer;">Iniciar</button>
+      <div id="simuladoQuestoes"></div>
+      <div id="resultadoSimulado"></div>
+    </div>
+  </div>
+<script>
+let questions = [
+  {
+    text: "O Município de São João da Boa Vista reger-se-á:",
+    options: {
+      A: "Por decreto legislativo aprovado pela Câmara.",
+      B: "Pela Constituição do Estado de São Paulo.",
+      C: "Pela Lei Orgânica Municipal.",
+      D: "Pelo Código Municipal de Posturas."
+    },
+    correct: "C",
+    tema: "Título I"
+  },
+  {
+    text: "O Governo Municipal é exercido por:",
+    options: {
+      A: "Prefeito e Juiz de Direito.",
+      B: "Câmara de Vereadores e Tribunal de Contas.",
+      C: "Prefeito e Câmara de Vereadores.",
+      D: "Vereadores e Vice-prefeito."
+    },
+    correct: "C",
+    tema: "Título I"
+  },
+  {
+    text: "Sobre os bens do Município, é correto afirmar:",
+    options: {
+      A: "São apenas os bens imóveis localizados dentro do perímetro urbano.",
+      B: "São somente os bens adquiridos por doação.",
+      C: "Compreendem todos os bens móveis e imóveis, direitos e ações.",
+      D: "São exclusivamente os bens da Câmara Municipal."
+    },
+    correct: "C",
+    tema: "Título I"
+  }
+  ,
+  {
+    text: "O Poder Legislativo Municipal é exercido:",
+    options: {
+      A: "Pela Câmara de Vereadores e pelo Prefeito.",
+      B: "Pela Câmara de Vereadores, composta por membros vitalícios.",
+      C: "Pela Câmara de Vereadores, eleita por voto direto e secreto.",
+      D: "Pela Assembleia Legislativa Estadual."
+    },
+    correct: "C",
+    tema: "Título II"
+  },
+  {
+    text: "O número de Vereadores será:",
+    options: {
+      A: "Definido pela Câmara a cada legislatura, sem limites.",
+      B: "Fixo em 11 vereadores.",
+      C: "Proporcional à população, conforme a Constituição Federal.",
+      D: "Determinado por plebiscito popular."
+    },
+    correct: "C",
+    tema: "Título II"
+  },
+  {
+    text: "A administração pública direta, indireta e fundacional do Município obedecerá, entre outros, ao princípio da:",
+    options: {
+      A: "Exclusividade.",
+      B: "Inafastabilidade.",
+      C: "Publicidade.",
+      D: "Subsidiariedade."
+    },
+    correct: "C",
+    tema: "Título III"
+  },
+  {
+    text: "O processo de planejamento municipal deve ser:",
+    options: {
+      A: "Rígido, com metas imutáveis.",
+      B: "Baseado apenas em planos estaduais.",
+      C: "Permanente, contínuo e descentralizado.",
+      D: "Controlado exclusivamente pelo Executivo."
+    },
+    correct: "C",
+    tema: "Título IV"
+  },
+  {
+    text: "O Município promoverá a defesa do consumidor por meio de:",
+    options: {
+      A: "Campanhas informais e espontâneas.",
+      B: "Decretos estaduais.",
+      C: "Política governamental própria e medidas de orientação e fiscalização.",
+      D: "Convênios com empresas privadas."
+    },
+    correct: "C",
+    tema: "Título V"
+  },
+  {
+    text: "A Lei Orgânica do Município entra em vigor:",
+    options: {
+      A: "Após aprovação do Tribunal de Justiça.",
+      B: "Após publicação no Diário Oficial da União.",
+      C: "Na data de sua promulgação pela Câmara Municipal.",
+      D: "Quando o Prefeito sancionar."
+    },
+    correct: "C",
+    tema: "Título VI"
+  }
+
+];
+// Exemplo de controle de abas e inicialização de recursos adicionais
+function showTab(tabId) {
+  document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
+  const btn = Array.from(document.querySelectorAll('nav button')).find(b => b.innerText.includes(tabId[0].toUpperCase()));
+  if (btn) btn.classList.add('active');
+  if (tabId === 'dashboard') atualizarDashboard();
+  if (tabId === 'historico') exibirHistorico();
+}
+
+function startSimulado() {
+  showTab('simulado');
+  document.getElementById("simuladoQuestoes").innerHTML = "";
+  document.getElementById("resultadoSimulado").innerHTML = "";
+}
+// Renderiza as questões na tela
+function renderQuestions(filtro = "todos") {
+  const container = document.getElementById("questions");
+  container.innerHTML = "";
+  const filtradas = filtro === "todos" ? questions : questions.filter(q => q.tema === filtro);
+
+  let current = 0;
+  function showQuestion(index) {
+    container.innerHTML = "";
+    const q = filtradas[index];
+    const div = document.createElement("div");
+    div.className = "question";
+    div.innerHTML = `<p>${index + 1}. ${q.text}</p>`;
+    ["A", "B", "C", "D"].forEach(letra => {
+      const opt = document.createElement("label");
+      opt.className = "option";
+      opt.style.display = "flex";
+      opt.style.alignItems = "center";
+
+      const radio = document.createElement("input");
+      radio.type = "radio";
+      radio.name = `q_${index}`;
+      radio.style.marginRight = "8px";
+
+      radio.onclick = () => {
+        const today = new Date().toISOString().slice(0, 10);
+        if (!stats[today]) stats[today] = {};
+        if (!stats[today][q.tema]) stats[today][q.tema] = { acertos: 0, erros: 0 };
+
+        if (letra === q.correct) {
+          opt.classList.add("correct");
+          stats[today][q.tema].acertos++;
+        } else {
+          opt.classList.add("incorrect");
+          stats[today][q.tema].erros++;
+        }
+        localStorage.setItem("desempenhoLeiOrganica", JSON.stringify(stats));
+      };
+
+      opt.appendChild(radio);
+      opt.appendChild(document.createTextNode(`${letra}) ${q.options[letra]}`));
+      div.appendChild(opt);
+    });
+    container.appendChild(div);
+    document.querySelector(".progress").textContent = `Questão ${index + 1} de ${filtradas.length}`;
+  }
+
+  showQuestion(current);
+
+  const nextBtn = document.getElementById("nextBtn");
+  nextBtn.onclick = () => {
+    if (current < filtradas.length - 1) {
+      current++;
+      showQuestion(current);
+    }
+  };
+}
+}
+
+function filtrarPorTema() {
+  const tema = document.getElementById("temaSelect").value;
+  renderQuestions(tema);
+}
+
+let stats = JSON.parse(localStorage.getItem("desempenhoLeiOrganica")) || {};
+window.addEventListener("load", () => {
+  atualizarGraficoTemas();
+  renderQuestions();
+});
+renderQuestions();
+</script>
+</body>
+  </html>
+Aprovada
